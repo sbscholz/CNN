@@ -82,9 +82,20 @@ float[*] ConvolveBatch( float[*] in, float[*] weights)
   shp = drop( [-1], shape( in)) - shape(weights) + 1;
   bs = take([-1], shape( in));
   out = with {
+#if 1
           (. <= iv <= .) : with {
                              (0*shape(weights) <= ov < shape(weights)) : weights[ov] * in[iv+ov];
                            } : fold( +, genarray(bs, 0f));
+#else
+  /*
+   * This variant mimicks the effect of suballoc when suppressing WLS....
+   */
+          (. <= iv <= .) : with {
+                             (. <= vv <= .) : with {
+                                                (0*shape(weights) <= ov < shape(weights)) : weights[ov] * in[iv+ov++vv];
+                                              } : fold( +, 0f);
+                           } : genarray( bs, 0f);
+#endif
         } : genarray( shp, genarray(bs, 0f));
 
    return out;
